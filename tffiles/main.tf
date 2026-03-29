@@ -40,6 +40,8 @@ resource "google_compute_instance" "app_server" {
     }
   }
 
+  allow_stopping_for_update = true
+
   network_interface {
     # Connect the instance to our custom subnetwork
     subnetwork = google_compute_subnetwork.app_subnet.id
@@ -89,6 +91,11 @@ resource "google_compute_instance_group" "app_instance_group" {
   zone      = var.gcp_zone
   network   = google_compute_network.vpc_network.id
   instances = [google_compute_instance.app_server.id]
+
+  named_port {
+    name = "http-custom" # The port name referenced in the backend service
+    port = 8081          # The actual custom port running on the instances
+  }
 }
 
 # Create a health check for the load balancer
@@ -109,7 +116,7 @@ resource "google_compute_health_check" "http_health_check" {
 resource "google_compute_backend_service" "app_backend_service" {
   name                  = "app-backend-service"
   protocol              = "HTTP"
-  port_name             = "http"
+  port_name             = "http-custom"
   load_balancing_scheme = "EXTERNAL"
   health_checks         = [google_compute_health_check.http_health_check.id]
 
@@ -149,4 +156,43 @@ resource "google_compute_firewall" "allow_lb_health_check" {
   # Google Cloud IP ranges for health checks and load balancers
   source_ranges = ["35.191.0.0/16", "130.211.0.0/22"]
   target_tags   = ["web-app"]
+}
+
+
+resource "google_compute_firewall" "allow-ssh-access" {
+  name    = "allow-ssh-access"
+  network = google_compute_network.vpc_network.id
+  allow {
+    protocol = "tcp"
+    ports    = ["22"]
+  }
+  # Google Cloud IP ranges for health checks and load balancers
+  source_ranges = ["0.0.0.0/0"]
+  target_tags   = ["web-app"]
+}
+
+# Create a Cloud Router. A router is required for Cloud NAT.
+resource "google_compute_router" "router" {
+  name    = "app-router"
+  region  = google_compute_subnetwork.app_subnet.region
+  network = google_compute_network.vpc_network.id
+}
+
+# Create the Cloud NAT gateway to allow outbound internet access for the VM
+resource "google_compute_router_nat" "nat" {
+  name   = "app-nat-gateway"
+  router = google_compute_router.router.name
+  region = google_compute_router.router.region
+
+  nat_ip_allocate_option = "AUTO_ONLY"
+
+  source_subnetwork_ip_ranges_to_nat = "LIST_OF_SUBNETWORKS"
+  log_config {
+    enable = true
+    filter = "ERRORS_ONLY"
+  }
+  subnetwork {
+    name                    = google_compute_subnetwork.app_subnet.id
+    source_ip_ranges_to_nat = ["ALL_IP_RANGES"]
+  }
 }
