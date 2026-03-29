@@ -37,6 +37,8 @@ if [ -f "$ENV_FILE" ]; then
     # `export $(...)` exports the variables to the current shell.
     # The sed command handles comments and empty lines.
     export $(grep -v '^#' "$ENV_FILE" | xargs)
+    # Set a default port if not specified in .env
+    export PORT=${PORT:-8081}
     echo "Environment variables from $ENV_FILE have been exported."
 else
     echo "Warning: $ENV_FILE not found. The application might not connect to the database."
