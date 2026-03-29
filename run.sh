@@ -19,12 +19,12 @@ if [ ! -d "venv" ]; then
 fi
 
 # Activate the virtual environment.
-source venv/bin/activate
+# Sourcing is not reliable in non-interactive scripts. We will call executables directly.
 
 echo "--- Installing dependencies ---"
 # Install dependencies from requirements.txt if the file exists.
 if [ -f "requirements.txt" ]; then
-    pip3 install -r requirements.txt
+    venv/bin/pip install -r requirements.txt
 else
     echo "Warning: 'requirements.txt' not found. Skipping dependency installation."
     echo "It is recommended to have a requirements.txt file."
@@ -34,16 +34,17 @@ echo "--- Exporting environment variables ---"
 # Export variables from the .env file.
 ENV_FILE="instance/.env"
 if [ -f "$ENV_FILE" ]; then
-    # `export $(...)` exports the variables to the current shell.
-    # The sed command handles comments and empty lines.
-    export $(grep -v '^#' "$ENV_FILE" | xargs)
-    # Set a default port if not specified in .env
-    export PORT=${PORT:-8081}
+    # Export variables for the child processes.
+    set -a
+    source "$ENV_FILE"
+    set +a
+    export PORT="${PORT:-8081}"
     echo "Environment variables from $ENV_FILE have been exported."
 else
     echo "Warning: $ENV_FILE not found. The application might not connect to the database."
 fi
 
 echo "--- Starting the application ---"
-# Run the application.
-nohup python3 run.py &
+# Run the application in the foreground.
+# The startup script process will stay alive, keeping the app running.
+venv/bin/python run.py
