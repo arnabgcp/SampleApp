@@ -6,13 +6,19 @@ variable "gcp_project_id" {
 variable "gcp_region" {
   type        = string
   description = "The GCP region for the resources."
-  default     = "us-central1"
+  default     = "me-central1"
 }
 
 variable "gcp_zone" {
   type        = string
   description = "The GCP zone for the GCE instance."
-  default     = "us-central1-a"
+  default     = "me-central1-a"
+}
+
+variable "network_name" {
+  type        = string
+  description = "The name of the VPC network."
+  default     = "app-vpc"
 }
 
 variable "git_repo_url" {
