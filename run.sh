@@ -46,4 +46,4 @@ fi
 
 echo "--- Starting the application ---"
 # Run the application.
-python run.py
+nohup python3 run.py &
