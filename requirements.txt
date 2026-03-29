@@ -1,0 +1,5 @@
+Flask
+Flask-SQLAlchemy
+Flask-Migrate
+cloud-sql-python-connector[pymysql]
+python-dotenv
