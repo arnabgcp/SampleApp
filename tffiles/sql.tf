@@ -1,7 +1,7 @@
 
 resource "google_sql_database_instance" "mtr" {
   name             = var.instance
-  database_version = "POSTGRES_15"
+  database_version = "POSTGRES_17"
   region           = var.gcp_region
 
 depends_on = ["google_service_networking_connection.private_vpc_connection"]
@@ -42,7 +42,7 @@ resource "google_sql_database" "database" {
 
 provisioner "local-exec" {
 
-command= "gcloud config set project ${var.project};gcloud sql import sql ${var.instance} gs://pgsql-backup-dem0/library.sql --database=library_db --user=postgres --quiet"
+command= "gcloud config set project ${var.gcp_project_id};gcloud sql import sql ${var.instance} gs://pgsql-backup-dem0/library.sql --database=library_db --user=postgres --quiet"
 
 }
 

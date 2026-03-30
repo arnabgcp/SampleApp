@@ -1,6 +1,7 @@
 variable "gcp_project_id" {
   type        = string
   description = "The GCP project ID to deploy resources into."
+  default     = "geoshield-demo"
 }
 
 variable "gcp_region" {
@@ -19,12 +20,6 @@ variable "network_name" {
   type        = string
   description = "The name of the VPC network."
   default     = "app-vpc"
-}
-
-
-variable "instance_connection_name" {
-  type        = string
-  description = "The Cloud SQL instance connection name."
 }
 
 variable "instance" {

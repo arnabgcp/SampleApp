@@ -15,6 +15,6 @@ terraform {
 
 
 provider "google" {
-  project = var.project 
+  project = var.gcp_project_id 
   
 }
