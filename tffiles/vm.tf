@@ -44,7 +44,7 @@ resource "google_compute_instance" "app_server" {
     mkdir -p instance
     cat <<EOF > instance/.env
 DB_USER="${google_sql_user.users.password}"
-DB_PASS="${google_sql_user.users.username}"
+DB_PASS="${google_sql_user.users.id}"
 DB_NAME="${google_sql_database.database.name}"
 INSTANCE_CONNECTION_NAME="${google_sql_database_instance.mtr.connection_name}"
 EOF
