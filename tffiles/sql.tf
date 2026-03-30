@@ -4,18 +4,28 @@ resource "google_sql_database_instance" "mtr" {
   database_version = "POSTGRES_17"
   region           = var.gcp_region
 
-depends_on = ["google_service_networking_connection.private_vpc_connection"]
+  # Removed quotes from the dependency reference
+  depends_on = [google_service_networking_connection.private_vpc_connection]
+
   settings {
-    tier = "db-f1-micro"
+    activation_policy = "ALWAYS"
+    availability_type = "ZONAL"
+    
+    # tier and edition must be top-level within settings
+    tier    = "db-custom-2-7680"
+    edition = "ENTERPRISE"
+
     ip_configuration {
       ipv4_enabled    = false
       private_network = google_compute_network.vpc_network.id
-      
     }
   }
-  # NOTE: Explicitly set deletion_protection=false to allow Terraform to destroy the instance
-  deletion_protection = false 
+
+deletion_protection=false
 }
+  # NOTE: Explicitly set deletion_protection=false to allow Terraform to destroy the instance
+   
+
 
 
 resource "random_string" "rs" {
@@ -29,11 +39,19 @@ resource "google_sql_user" "users" {
   password = random_string.rs.id
 }
 
+
+
 # Grant the Cloud SQL instance's service account the Storage Object Admin role on the bucket
 resource "google_storage_bucket_iam_member" "bucket_iam_binding" {
   bucket = "pgsql-backup-dem0"
-  role   = "roles/storage.objectReader" 
-  member = "serviceAccount:{google_sql_database_instance.mtr.service_account_name}" # The exact SA format might slightly vary, check the instance overview in the console if needed.
+  role   = "roles/storage.objectAdmin" 
+  
+  # Fixed the interpolation syntax: ${ ... }
+  member = "serviceAccount:${google_sql_database_instance.mtr.service_account_email_address}" 
+  
+  # Note: depends_on is technically redundant here because 
+  # referencing the .service_account_email_address attribute 
+  # already creates an implicit dependency.
 }
 
 resource "google_sql_database" "database" {

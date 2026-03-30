@@ -43,19 +43,21 @@ resource "google_compute_instance" "app_server" {
     # Create the .env file from Terraform variables
     mkdir -p instance
     cat <<EOF > instance/.env
-DB_USER="${google_sql_user.users.password}"
-DB_PASS="${google_sql_user.users.id}"
+DB_USER="${google_sql_user.users[0].name}"
+DB_PASS="${google_sql_user.users.password}"
 DB_NAME="${google_sql_database.database.name}"
 INSTANCE_CONNECTION_NAME="${google_sql_database_instance.mtr.connection_name}"
 EOF
- 
-  lifecycle {
-    create_before_destroy = true
-  }
+
 
 
     # Make the run script executable and run it
     chmod +x run.sh
     ./run.sh
   EOT
+
+
+   lifecycle {
+    create_before_destroy = true
+  }
 }
