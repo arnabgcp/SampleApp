@@ -21,30 +21,14 @@ variable "network_name" {
   default     = "app-vpc"
 }
 
-variable "git_repo_url" {
-  type        = string
-  description = "The URL of the Git repository to clone."
-  # Example: "https://github.com/your-username/your-repo.git"
-}
-
-variable "db_user" {
-  type        = string
-  description = "The database user."
-  sensitive   = true
-}
-
-variable "db_pass" {
-  type        = string
-  description = "The database password."
-  sensitive   = true
-}
-
-variable "db_name" {
-  type        = string
-  description = "The database name."
-}
 
 variable "instance_connection_name" {
   type        = string
   description = "The Cloud SQL instance connection name."
+}
+
+variable "instance" {
+  type        = string
+  description = "The Cloud SQL instance name."
+  default     = "lib-instance"
 }
