@@ -33,7 +33,7 @@ resource "random_string" "rs" {
 }
 
 resource "google_sql_user" "users" {
-  name     = "postgres"
+  name     = "library"
   instance = google_sql_database_instance.mtr.name
   
   password = random_string.rs.id
@@ -60,7 +60,7 @@ resource "google_sql_database" "database" {
 
 provisioner "local-exec" {
 
-command= "gcloud config set project ${var.gcp_project_id};gcloud sql import sql ${var.instance} gs://pgsql-backup-dem0/library.sql --database=library_db --user=postgres --quiet"
+command= "gcloud config set project ${var.gcp_project_id};gcloud sql import sql ${var.instance} gs://pgsql-backup-dem0/library.sql --database=library_db --user=library --quiet"
 
 }
 
