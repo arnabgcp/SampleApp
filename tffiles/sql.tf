@@ -58,10 +58,9 @@ resource "google_sql_database" "database" {
   name     = "library_db"
   instance = google_sql_database_instance.mtr.name
 
-provisioner "local-exec" {
-
-command= "gcloud config set project ${var.gcp_project_id};gcloud sql import sql ${var.instance} gs://pgsql-backup-dem0/library.sql --database=library_db --user=library --quiet"
-
+  provisioner "local-exec" {
+    # Use ${self.instance} to dynamically get the correct instance name
+    command = "gcloud sql import sql ${self.instance} gs://pgsql-backup-dem0/library.sql --database=${self.name} --user=library --quiet"
+  }
 }
 
-}
