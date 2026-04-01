@@ -1,0 +1,219 @@
+# Create a subnet in the specified region
+resource "google_compute_subnetwork" "app_subnet_secon" {
+ name          = "app-subnet-secon"
+ ip_cidr_range = "10.12.10.0/24"
+ region        = "asia-south1"
+ network       = google_compute_network.vpc_network.id
+}
+
+
+resource "google_sql_database_instance" "mtr_secon" {
+ name             = "library-secon"
+ database_version = "POSTGRES_17"
+ region           = "asia-south1"
+
+
+ # Removed quotes from the dependency reference
+ depends_on = [google_service_networking_connection.private_vpc_connection]
+
+
+ settings {
+   activation_policy = "ALWAYS"
+   availability_type = "ZONAL"
+  
+   # tier and edition must be top-level within settings
+   tier    = "db-custom-2-7680"
+   edition = "ENTERPRISE"
+
+
+   ip_configuration {
+     ipv4_enabled    = true
+     private_network = google_compute_network.vpc_network.id
+   }
+ }
+
+
+deletion_protection=false
+}
+ # NOTE: Explicitly set deletion_protection=false to allow Terraform to destroy the instance
+ 
+
+
+
+
+
+
+resource "random_string" "rs_secon" {
+ length = 10
+}
+
+
+resource "google_sql_user" "users_secon" {
+ name     = "library"
+ instance = google_sql_database_instance.mtr_secon.name
+  password = random_string.rs.id
+}
+
+
+
+
+
+
+# Grant the Cloud SQL instance's service account the Storage Object Admin role on the bucket
+resource "google_storage_bucket_iam_member" "bucket_iam_binding_secon" {
+ bucket = "pgsql-backup-dem0"
+ role   = "roles/storage.objectAdmin"
+  # Fixed the interpolation syntax: ${ ... }
+ member = "serviceAccount:${google_sql_database_instance.mtr_secon.service_account_email_address}"
+  # Note: depends_on is technically redundant here because
+ # referencing the .service_account_email_address attribute
+ # already creates an implicit dependency.
+}
+
+
+
+resource "google_sql_database" "database_secon" {
+  name     = "library_db"
+  instance = google_sql_database_instance.mtr_secon.name
+
+  provisioner "local-exec" {
+    # Use ${self.instance} to dynamically get the correct instance name
+    command = "gcloud sql import sql ${self.instance} gs://pgsql-backup-dem0/library.sql --database=${self.name} --user=library --quiet"
+  }
+}
+
+
+
+
+
+resource "google_compute_instance" "app_server_secon" {
+ name         = "flask-app-server-secon"
+ machine_type = "e2-medium"
+ zone         = "asia-south1-c"
+ tags         = ["web-app"]
+
+
+ boot_disk {
+   initialize_params {
+     image = "debian-cloud/debian-11"
+     size  = 100
+   }
+ }
+
+
+ allow_stopping_for_update = true
+
+
+ network_interface {
+   # Connect the instance to our custom subnetwork
+   subnetwork = google_compute_subnetwork.app_subnet_secon.id
+ }
+
+
+
+
+ // The service account needs "Cloud SQL Client" role to connect to the database.
+ // Ensure the default compute service account has this role in IAM.
+ service_account {
+   email  = "default"
+   scopes = ["cloud-platform"]
+ }
+
+
+ // This startup script runs once when the VM is created.
+ metadata_startup_script = <<-EOT
+   #!/bin/bash
+   set -e
+  
+   # Install dependencies
+   apt-get update
+   apt-get install -y git python3-pip python3-venv
+
+
+   # Clone the application repository
+   git clone https://github.com/arnabgcp/SampleApp.git /app
+   cd /app
+
+
+   # Create the .env file from Terraform variables
+   mkdir -p instance
+   cat <<EOF > instance/.env
+DB_USER="${google_sql_user.users_secon.name}"
+DB_PASS="${google_sql_user.users_secon.password}"
+DB_NAME="${google_sql_database.database_secon.name}"
+INSTANCE_CONNECTION_NAME="${google_sql_database_instance.mtr_secon.connection_name}"
+EOF
+
+
+
+
+
+
+   # Make the run script executable and run it
+   chmod +x run.sh
+   ./run.sh
+ EOT
+
+
+
+
+  lifecycle {
+   create_before_destroy = true
+ }
+}
+
+
+resource "google_compute_instance_group" "app_instance_group_secon" {
+ name      = "app-instance-group-secon"
+ zone      = "asia-south1-c"
+ network   = google_compute_network.vpc_network.id
+ instances = [google_compute_instance.app_server_secon.id]
+
+
+ named_port {
+   name = "http-custom" # The port name referenced in the backend service
+   port = 8081          # The actual custom port running on the instances
+ }
+}
+
+
+
+resource "google_compute_backend_service" "app_backend_service_secon" {
+ name                  = "app-backend-service-secon"
+ protocol              = "HTTP"
+ port_name             = "http-custom"
+ load_balancing_scheme = "EXTERNAL"
+ health_checks         = [google_compute_health_check.http_health_check.id]
+
+
+ backend {
+   group = google_compute_instance_group.app_instance_group_secon.id
+ }
+}
+
+
+
+resource "google_compute_router" "router_secon" {
+  name    = "app-router-secon"
+  region  = google_compute_subnetwork.app_subnet_secon.region
+  network = google_compute_network.vpc_network.id
+}
+
+# Create the Cloud NAT gateway to allow outbound internet access for the VM
+resource "google_compute_router_nat" "nat_secon" {
+  name   = "app-nat-gateway-secon"
+  router = google_compute_router.router_secon.name
+  region = google_compute_router.router_secon.region
+
+  nat_ip_allocate_option = "AUTO_ONLY"
+
+  source_subnetwork_ip_ranges_to_nat = "LIST_OF_SUBNETWORKS"
+  log_config {
+    enable = true
+    filter = "ERRORS_ONLY"
+  }
+  subnetwork {
+    name                    = google_compute_subnetwork.app_subnet_secon.id
+    source_ip_ranges_to_nat = ["ALL_IP_RANGES"]
+  }
+}

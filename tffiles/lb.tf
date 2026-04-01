@@ -12,9 +12,16 @@ resource "google_compute_backend_service" "app_backend_service" {
 }
 
 # Create the URL map to route all traffic to the backend service
+#resource "google_compute_url_map" "url_map" {
+#  name            = "app-url-map"
+#  default_service = google_compute_backend_service.app_backend_service.id
+#}
+
+
+# Create the URL map to route all traffic to the backend service
 resource "google_compute_url_map" "url_map" {
-  name            = "app-url-map"
-  default_service = google_compute_backend_service.app_backend_service.id
+ name            = "app-url-map"
+ default_service = google_compute_backend_service.app_backend_service.id
 }
 
 # Create the target HTTP proxy
