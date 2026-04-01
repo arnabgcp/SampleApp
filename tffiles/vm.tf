@@ -1,3 +1,6 @@
+
+data "google_compute_default_service_account" "default" {}
+
 # Renamed from app_server to make its purpose clearer
 resource "google_compute_instance" "app_server" {
   name         = "flask-app-server"
@@ -23,7 +26,7 @@ resource "google_compute_instance" "app_server" {
   // The service account needs "Cloud SQL Client" role to connect to the database.
   // Ensure the default compute service account has this role in IAM.
   service_account {
-    email  = "default"
+    email  = data.google_compute_default_service_account.default.email
     scopes = ["cloud-platform"]
   }
 
@@ -84,10 +87,13 @@ EOF
     systemctl enable sample-app.service
     systemctl start sample-app.service
 
-  EOTs
+  EOT
 
 
    lifecycle {
+    ignore_changes = [
+      metadata_startup_script,
+    ]
     create_before_destroy = true
   }
 }

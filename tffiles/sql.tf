@@ -60,7 +60,7 @@ resource "google_sql_database" "database" {
 
   provisioner "local-exec" {
     # Use ${self.instance} to dynamically get the correct instance name
-    command = "gcloud sql import sql ${self.instance} gs://pgsql-backup-dem0/library.sql --database=${self.name} --user=library --quiet"
+    command = "sleep 10; gcloud sql import sql ${self.instance} gs://pgsql-backup-dem0/library.sql --database=${self.name} --user=library --quiet"
   }
 }
 

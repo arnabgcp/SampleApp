@@ -7,13 +7,13 @@ variable "gcp_project_id" {
 variable "gcp_region" {
   type        = string
   description = "The GCP region for the resources."
-  default     = "me-central1"
+  default     = "asia-east1"
 }
 
 variable "gcp_zone" {
   type        = string
   description = "The GCP zone for the GCE instance."
-  default     = "me-central1-a"
+  default     = "asia-east1-a"
 }
 
 variable "network_name" {
