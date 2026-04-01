@@ -53,7 +53,7 @@ EOF
 
     # Make the run script executable and run it
     chmod +x run.sh
-    ./run.sh
+    nohup ./run.sh &
   EOT
 
 
